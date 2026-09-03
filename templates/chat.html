@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WS Clone</title>
+
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body class="chat-body">
+
+  <!-- =========================
+       SIDEBAR
+  ========================== -->
+  <div class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+
+      <div
+        class="my-avatar"
+        style="background: {{ user.avatar_color }}"
+      >
+        {{ user.username[0].upper() }}
+      </div>
+
+      <span class="my-username">
+        {{ user.username }}
+        {% if user.phone_number %}
+        <span class="my-phone">{{ user.phone_number }}</span>
+        {% endif %}
+      </span>
+
+      <button
+        class="icon-btn"
+        onclick="handleLogout()"
+        title="Logout"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+          <path d="M16 17l5-5-5-5"/>
+          <path d="M21 12H9"/>
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-bar">
+
+      <input
+        type="text"
+        placeholder="Search rooms..."
+        id="roomSearch"
+        oninput="filterRooms()"
+      >
+
+    </div>
+
+    <!-- ROOM LABEL -->
+    <div class="rooms-label">
+
+      CHAT ROOMS
+
+      <button
+        class="add-room-btn"
+        onclick="showNewRoomModal()"
+        title="Create new room"
+      >
+        +
+      </button>
+
+    </div>
+
+    <!-- ROOMS -->
+    <div class="rooms-list" id="roomsList">
+
+      {% for room in rooms %}
+
+      <div
+        class="room-item"
+        id="room-{{ room.id }}"
+        onclick="joinRoom(
+          '{{ room.id }}',
+          '{{ room.name }}',
+          '{{ room.description }}'
+        )"
+      >
+
+        <div class="room-icon">
+          #
+        </div>
+
+        <div class="room-info">
+
+          <span class="room-name">
+            {{ room.name }}
+          </span>
+
+          <span class="room-desc">
+            {{ room.description }}
+          </span>
+
+        </div>
+
+      </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       MAIN CHAT AREA
+  ========================== -->
+  <div class="chat-area">
+
+    <!-- =========================
+         WELCOME SCREEN
+    ========================== -->
+    <div
+      class="welcome-screen"
+      id="welcomeScreen"
+    >
+
+      <div class="welcome-icon">
+
+        <svg
+          width="80"
+          height="80"
+          viewBox="0 0 48 48"
+          fill="none"
+        >
+          <circle
+            cx="24"
+            cy="24"
+            r="24"
+            fill="#25D366"
+            opacity="0.15"
+          />
+
+          <path
+            d="M24 10C16.268 10 10 16.268 10 24c0 2.936.84 5.676 2.296 7.99L10 38l6.21-2.268A13.93 13.93 0 0024 38c7.732 0 14-6.268 14-14S31.732 10 24 10z"
+            fill="#25D366"
+          />
+        </svg>
+
+      </div>
+
+      <h2>WS Clone</h2>
+
+      <p>
+        Select a room from the sidebar to start chatting
+      </p>
+
+    </div>
+
+
+    <!-- =========================
+         CHAT WINDOW
+    ========================== -->
+    <div
+      class="chat-window"
+      id="chatWindow"
+      style="display:none"
+      >
+
+      <!-- HEADER -->
+      <div class="chat-header">
+
+        <button
+          class="back-btn"
+          id="backBtn"
+          onclick="closeRoom()"
+          style="display:none"
+        >
+          ←
+        </button>
+
+        <div class="chat-header-info">
+
+          <div class="room-avatar">
+            #
+          </div>
+
+          <div>
+
+            <div
+              class="chat-room-name"
+              id="chatRoomName"
+            >
+              General
+            </div>
+
+            <div
+              class="chat-room-desc"
+              id="chatRoomDesc"
+            >
+            </div>
+
+          </div>
+
+        </div>
+
+        <div
+          class="online-badge"
+          id="onlineBadge"
+        >
+          ● Online
+        </div>
+
+      </div>
+
+
+      <!-- MESSAGES -->
+<div
+  class="messages-container"
+  id="messagesContainer"
+>
+
+  <div
+    class="loading-msgs"
+    id="loadingMsgs"
+  >
+    Loading messages...
+  </div>
+
+</div>
+
+
+      <!-- INPUT -->
+      <div class="chat-input-area">
+
+        <div class="input-wrapper">
+
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type a message..."
+            onkeydown="handleKey(event)"
+            maxlength="2000"
+          >
+
+          <button
+            class="send-btn"
+            onclick="sendMessage()"
+            id="sendBtn"
+          >
+
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+
+              <polygon
+                points="22 2 15 22 11 13 2 9 22 2"
+              >
+              </polygon>
+            </svg>
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       NEW ROOM MODAL
+  ========================== -->
+  <div
+    class="modal-overlay"
+    id="modalOverlay"
+    onclick="hideModal(event)"
+  >
+
+    <div class="modal">
+
+      <h3>Create New Room</h3>
+
+      <div
+        id="modal-error"
+        class="error-banner"
+        style="display:none"
+      >
+      </div>
+
+      <!-- ROOM NAME -->
+      <div class="form-group">
+
+        <label>
+          Room Name
+        </label>
+
+        <input
+          type="text"
+          id="newRoomName"
+          placeholder="e.g. Gaming"
+          maxlength="50"
+        >
+
+      </div>
+
+      <!-- DESCRIPTION -->
+      <div class="form-group">
+
+        <label>
+          Description (optional)
+        </label>
+
+        <input
+          type="text"
+          id="newRoomDesc"
+          placeholder="What's this room about?"
+          maxlength="100"
+        >
+
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="modal-actions">
+
+        <!-- FIXED CANCEL BUTTON -->
+        <button
+          type="button"
+          class="btn-secondary"
+          onclick="hideNewRoomModal()"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="btn-primary"
+          onclick="createRoom()"
+        >
+          Create Room
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       CHAT JS
+  ========================== -->
+  <script src="/static/js/chat.js"></script>
+
+
+  <!-- =========================
+       CURRENT USER
+  ========================== -->
+  <script>
+
+    const CURRENT_USER = {
+
+      id: "{{ user.id }}",
+
+      username: "{{ user.username }}",
+
+      avatar_color: "{{ user.avatar_color }}"
+    };
+
+  </script>
+
+</body>
+</html>

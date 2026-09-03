@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WS Clone — Login</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="24" fill="#25D366"/>
+          <path d="M24 10C16.268 10 10 16.268 10 24c0 2.936.84 5.676 2.296 7.99L10 38l6.21-2.268A13.93 13.93 0 0024 38c7.732 0 14-6.268 14-14S31.732 10 24 10z" fill="white"/>
+          <path d="M20 18c-.5-1-1-1-1.5-1h-.5c-.5 0-1 .5-1.5 1-.5.5-2 2-2 4.5s2 4.5 2.5 5 3.5 3.5 7.5 5 4.5 1 5 .5l1.5-1.5c.5-.5.5-1 .5-1.5l-3-1.5c-.5 0-1 .5-1.5 1l-.5.5c-.5.5-1 .5-1.5 0C25 30 22.5 27.5 22 27s-.5-1 0-1.5l.5-.5c.5-.5.5-1 .5-1.5L21.5 20c0-.5-.5-.5-1.5-2z" fill="#25D366"/>
+        </svg>
+      </div>
+      <h1>Welcome back</h1>
+      <p>Sign in to continue chatting</p>
+    </div>
+
+    <div class="auth-card">
+      <div id="error-msg" class="error-banner" style="display:none"></div>
+
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+
+      <button class="btn-primary" id="loginBtn" onclick="handleLogin()">
+        Sign In
+      </button>
+
+      <p class="auth-switch">
+        Don't have an account? <a href="/register">Create one</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('loginBtn');
+      const errorEl = document.getElementById('error-msg');
+
+      if (!username || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      btn.textContent = 'Signing in...';
+      btn.disabled = true;
+      errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          window.location.href = '/chat';
+        } else {
+          let errorMsg = 'Login failed';
+          if (typeof data.detail === 'string') {
+            errorMsg = data.detail;
+          } else if (Array.isArray(data.detail)) {
+            errorMsg = data.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+          } else if (data.detail) {
+            errorMsg = JSON.stringify(data.detail);
+          }
+          showError(errorMsg);
+          btn.textContent = 'Sign In';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+        btn.textContent = 'Sign In';
+        btn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WS Clone — Register</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="24" fill="#25D366"/>
+          <path d="M24 10C16.268 10 10 16.268 10 24c0 2.936.84 5.676 2.296 7.99L10 38l6.21-2.268A13.93 13.93 0 0024 38c7.732 0 14-6.268 14-14S31.732 10 24 10z" fill="white"/>
+          <path d="M20 18c-.5-1-1-1-1.5-1h-.5c-.5 0-1 .5-1.5 1-.5.5-2 2-2 4.5s2 4.5 2.5 5 3.5 3.5 7.5 5 4.5 1 5 .5l1.5-1.5c.5-.5.5-1 .5-1.5l-3-1.5c-.5 0-1 .5-1.5 1l-.5.5c-.5.5-1 .5-1.5 0C25 30 22.5 27.5 22 27s-.5-1 0-1.5l.5-.5c.5-.5.5-1 .5-1.5L21.5 20c0-.5-.5-.5-1.5-2z" fill="#25D366"/>
+        </svg>
+      </div>
+      <h1>Create account</h1>
+      <p>Join the conversation</p>
+    </div>
+
+    <div class="auth-card">
+      <div id="error-msg" class="error-banner" style="display:none"></div>
+      <div id="success-msg" class="success-banner" style="display:none"></div>
+      <div id="dev-otp-hint" class="dev-otp-hint" style="display:none"></div>
+
+      <!-- ========================= -->
+      <!-- PHONE NUMBER + OTP -->
+      <!-- ========================= -->
+      <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <div class="phone-row">
+          <input
+            type="tel"
+            id="phone"
+            placeholder="98765 43210 or +91 98765 43210"
+            autocomplete="tel"
+            oninput="formatPhoneInput()"
+          >
+          <button
+            type="button"
+            class="btn-secondary btn-otp"
+            id="sendOtpBtn"
+            onclick="sendOtp()"
+          >
+            Send OTP
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" id="otpGroup" style="display:none">
+        <label for="otpInput">Enter OTP</label>
+        <div class="phone-row">
+          <input
+            type="text"
+            id="otpInput"
+            placeholder="6-digit code"
+            maxlength="6"
+            inputmode="numeric"
+          >
+          <button
+            type="button"
+            class="btn-secondary btn-otp"
+            id="verifyOtpBtn"
+            onclick="verifyOtp()"
+          >
+            Verify
+          </button>
+        </div>
+        <span class="resend-link" id="resendLink" onclick="sendOtp()">Resend OTP</span>
+      </div>
+
+      <div class="phone-verified-badge" id="phoneVerifiedBadge" style="display:none">
+        ✅ Phone number verified
+      </div>
+
+      <!-- ========================= -->
+      <!-- REST OF THE FORM -->
+      <!-- ========================= -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Choose a username" autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="your@email.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="At least 6 characters" autocomplete="new-password">
+      </div>
+
+      <button class="btn-primary" id="registerBtn" onclick="handleRegister()">
+        Create Account
+      </button>
+
+      <p class="auth-switch">
+        Already have an account? <a href="/login">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let phoneVerified = false;
+    let resendCooldownTimer = null;
+
+    // =========================
+    // LIVE PHONE FORMATTING
+    // =========================
+    function formatPhoneInput() {
+      const input = document.getElementById('phone');
+      const digits = input.value.replace(/\D/g, '').slice(0, 15);
+      let formatted;
+
+      if (digits.length > 10) {
+        // treat the leading extra digits as a country code
+        const cc = digits.slice(0, digits.length - 10);
+        const local = digits.slice(digits.length - 10);
+        formatted = '+' + cc + ' ' + local.slice(0, 5) +
+          (local.length > 5 ? ' ' + local.slice(5) : '');
+      } else {
+        formatted = digits.slice(0, 5) +
+          (digits.length > 5 ? ' ' + digits.slice(5, 10) : '');
+      }
+
+      input.value = formatted.trim();
+    }
+
+    function getRawPhone() {
+      return document.getElementById('phone').value.replace(/\s/g, '');
+    }
+
+    // =========================
+    // SEND OTP
+    // =========================
+    async function sendOtp() {
+      const phone = getRawPhone();
+      const sendBtn = document.getElementById('sendOtpBtn');
+
+      hideMessages();
+
+      const digitCount = phone.replace(/^\+/, '').length;
+      if (digitCount < 7 || digitCount > 15) {
+        showError('Enter a valid phone number');
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch('/otp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: phone })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          document.getElementById('otpGroup').style.display = 'block';
+          document.getElementById('phone').disabled = true;
+
+          // Dev-mode only: no real SMS provider is wired in, so the
+          // OTP is shown here instead of being texted. Remove this
+          // block once a real provider (Twilio/MSG91/etc.) is added.
+          if (data.dev_otp) {
+            const hint = document.getElementById('dev-otp-hint');
+            hint.textContent = `Demo mode (no SMS provider configured): your OTP is ${data.dev_otp}`;
+            hint.style.display = 'block';
+          }
+
+          startResendCooldown();
+        } else {
+          showError(data.detail || 'Could not send OTP');
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send OTP';
+      }
+    }
+
+    function startResendCooldown(seconds = 30) {
+      const link = document.getElementById('resendLink');
+      let remaining = seconds;
+      link.style.pointerEvents = 'none';
+      link.textContent = `Resend OTP (${remaining}s)`;
+
+      clearInterval(resendCooldownTimer);
+      resendCooldownTimer = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(resendCooldownTimer);
+          link.style.pointerEvents = 'auto';
+          link.textContent = 'Resend OTP';
+        } else {
+          link.textContent = `Resend OTP (${remaining}s)`;
+        }
+      }, 1000);
+    }
+
+    // =========================
+    // VERIFY OTP
+    // =========================
+    async function verifyOtp() {
+      const phone = getRawPhone();
+      const code = document.getElementById('otpInput').value.trim();
+      const verifyBtn = document.getElementById('verifyOtpBtn');
+
+      hideMessages();
+
+      if (code.length !== 6) {
+        showError('Enter the 6-digit OTP');
+        return;
+      }
+
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying...';
+
+      try {
+        const res = await fetch('/otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: phone, otp: code })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          phoneVerified = true;
+          document.getElementById('otpGroup').style.display = 'none';
+          document.getElementById('dev-otp-hint').style.display = 'none';
+          document.getElementById('phoneVerifiedBadge').style.display = 'block';
+        } else {
+          showError(data.detail || 'Verification failed');
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+      } finally {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify';
+      }
+    }
+
+    // =========================
+    // REGISTER
+    // =========================
+    async function handleRegister() {
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const phone = getRawPhone();
+      const btn = document.getElementById('registerBtn');
+
+      hideMessages();
+
+      if (!phoneVerified) {
+        showError('Please verify your phone number first');
+        return;
+      }
+      if (!username || !email || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        return;
+      }
+
+      btn.textContent = 'Creating account...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, phone_number: phone })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showSuccess('Account created! Redirecting to login...');
+          setTimeout(() => window.location.href = '/login', 1500);
+        } else {
+          // Handle all possible error formats from FastAPI
+          let errorMsg = 'Registration failed';
+          if (typeof data.detail === 'string') {
+            errorMsg = data.detail;
+          } else if (Array.isArray(data.detail)) {
+            errorMsg = data.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+          } else if (data.detail) {
+            errorMsg = JSON.stringify(data.detail);
+          }
+          showError(errorMsg);
+          btn.textContent = 'Create Account';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showError('Connection error. Please try again.');
+        btn.textContent = 'Create Account';
+        btn.disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('success-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideMessages() {
+      document.getElementById('error-msg').style.display = 'none';
+      document.getElementById('success-msg').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
