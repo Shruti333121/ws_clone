@@ -251,6 +251,7 @@ body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--wa-
   font-weight: 700;
   font-size: 1rem;
   flex-shrink: 0;
+  background: var(--avatar-color);
 }
 
 .my-username {

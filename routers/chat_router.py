@@ -9,6 +9,7 @@ import schemas
 import auth
 from database import get_db
 
+
 router = APIRouter()
 
 templates = Jinja2Templates(directory="templates")
@@ -21,8 +22,6 @@ def get_user_from_cookie(request: Request, db: Session):
 
     token = request.cookies.get("access_token")
 
-    print("TOKEN:", token)
-
     if not token:
         return None
 
@@ -31,8 +30,6 @@ def get_user_from_cookie(request: Request, db: Session):
             access_token=token,
             db=db
         )
-
-        print("USER:", user)
 
         return user
 
@@ -45,28 +42,41 @@ def get_user_from_cookie(request: Request, db: Session):
 # ROOT
 # =========================
 @router.get("/", response_class=HTMLResponse)
-def root(request: Request, db: Session = Depends(get_db)):
+def root(
+    request: Request,
+    db: Session = Depends(get_db)
+):
 
     user = get_user_from_cookie(request, db)
 
     if user:
-        return RedirectResponse(url="/chat", status_code=302)
+        return RedirectResponse(
+            url="/chat",
+            status_code=302
+        )
 
-    return RedirectResponse(url="/login", status_code=302)
+    return RedirectResponse(
+        url="/login",
+        status_code=302
+    )
 
 
 # =========================
 # CHAT PAGE
 # =========================
 @router.get("/chat", response_class=HTMLResponse)
-def chat_page(request: Request, db: Session = Depends(get_db)):
+def chat_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
 
     user = get_user_from_cookie(request, db)
 
-    print("COOKIES:", request.cookies)
-
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(
+            url="/login",
+            status_code=302
+        )
 
     rooms = db.query(models.Room).all()
 
@@ -84,7 +94,9 @@ def chat_page(request: Request, db: Session = Depends(get_db)):
 # CURRENT USER API
 # =========================
 @router.get("/api/me")
-def get_me(current_user=Depends(auth.get_current_user)):
+def get_me(
+    current_user=Depends(auth.get_current_user)
+):
 
     return {
         "id": current_user.id,
@@ -97,7 +109,10 @@ def get_me(current_user=Depends(auth.get_current_user)):
 # =========================
 # GET ROOMS
 # =========================
-@router.get("/api/rooms", response_model=List[schemas.RoomOut])
+@router.get(
+    "/api/rooms",
+    response_model=List[schemas.RoomOut]
+)
 def get_rooms(
     db: Session = Depends(get_db),
     current_user=Depends(auth.get_current_user)
@@ -109,16 +124,21 @@ def get_rooms(
 # =========================
 # CREATE ROOM
 # =========================
-@router.post("/api/rooms", response_model=schemas.RoomOut)
+@router.post(
+    "/api/rooms",
+    response_model=schemas.RoomOut
+)
 def create_room(
     room: schemas.RoomCreate,
     db: Session = Depends(get_db),
     current_user=Depends(auth.get_current_user)
 ):
 
-    existing_room = db.query(models.Room).filter(
-        models.Room.name == room.name
-    ).first()
+    existing_room = (
+        db.query(models.Room)
+        .filter(models.Room.name == room.name)
+        .first()
+    )
 
     if existing_room:
         raise HTTPException(

@@ -137,7 +137,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: int):
                 db.commit()
                 db.refresh(new_msg)
                 msg_id = new_msg.id
-                timestamp = new_msg.timestamp.strftime("%H:%M")
+                timestamp = new_msg.timestamp.isoformat()
             finally:
                 db.close()
 

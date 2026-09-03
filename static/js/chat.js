@@ -29,8 +29,7 @@ function connectWebSocket(roomId) {
 
         document.getElementById(
             "onlineBadge"
-        ).innerHTML =
-            "🟢 Online";
+        ).innerHTML = "🟢 Online";
     };
 
     socket.onmessage = (event) => {
@@ -52,8 +51,7 @@ function connectWebSocket(roomId) {
 
         document.getElementById(
             "onlineBadge"
-        ).innerHTML =
-            "🔴 Offline";
+        ).innerHTML = "🔴 Offline";
     };
 
     socket.onerror = (error) => {
@@ -82,25 +80,29 @@ function handleIncoming(data) {
         return;
     }
 
-    // default: chat message
+    // Default: chat message
     appendMessage(data);
 }
 
 
 // =========================
-// SYSTEM MESSAGE (join/leave)
+// SYSTEM MESSAGE
 // =========================
 function appendSystemMessage(text) {
 
     const messagesContainer =
         document.getElementById("messagesContainer");
 
-    const el = document.createElement("div");
+    const el =
+        document.createElement("div");
+
     el.className = "system-msg";
     el.innerText = text;
 
     messagesContainer.appendChild(el);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    messagesContainer.scrollTop =
+        messagesContainer.scrollHeight;
 }
 
 
@@ -109,7 +111,9 @@ function appendSystemMessage(text) {
 // =========================
 function updateOnlineBadge(count) {
 
-    if (count === undefined) return;
+    if (count === undefined) {
+        return;
+    }
 
     document.getElementById("onlineBadge").innerHTML =
         `🟢 ${count} online`;
@@ -117,51 +121,74 @@ function updateOnlineBadge(count) {
 
 
 // =========================
-// TYPING INDICATOR (incoming)
+// TYPING INDICATOR - INCOMING
 // =========================
 function showTypingIndicator(username) {
 
-    let el = document.getElementById("typingIndicator");
+    let el =
+        document.getElementById("typingIndicator");
+
     const messagesContainer =
         document.getElementById("messagesContainer");
 
     if (!el) {
-        el = document.createElement("div");
+
+        el =
+            document.createElement("div");
+
         el.id = "typingIndicator";
         el.className = "typing-indicator";
+
         messagesContainer.appendChild(el);
     }
 
     el.innerHTML =
         `${escapeHTML(username)} is typing<span class="typing-dots"><span></span><span></span><span></span></span>`;
 
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    messagesContainer.scrollTop =
+        messagesContainer.scrollHeight;
 
     clearTimeout(typingIndicatorTimeout);
-    typingIndicatorTimeout = setTimeout(() => {
-        if (el) el.remove();
-    }, 2000);
+
+    typingIndicatorTimeout =
+        setTimeout(() => {
+
+            if (el) {
+                el.remove();
+            }
+
+        }, 2000);
 }
 
 
 // =========================
-// TYPING INDICATOR (outgoing)
+// TYPING INDICATOR - OUTGOING
 // =========================
 function notifyTyping() {
 
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+    if (
+        !socket ||
+        socket.readyState !== WebSocket.OPEN
+    ) {
         return;
     }
 
     if (typingTimeout) {
-        return; // already told the server recently, throttle it
+        return;
     }
 
-    socket.send(JSON.stringify({ type: "typing" }));
+    socket.send(
+        JSON.stringify({
+            type: "typing"
+        })
+    );
 
-    typingTimeout = setTimeout(() => {
-        typingTimeout = null;
-    }, 1500);
+    typingTimeout =
+        setTimeout(() => {
+
+            typingTimeout = null;
+
+        }, 1500);
 }
 
 
@@ -171,16 +198,20 @@ function notifyTyping() {
 function appendMessage(data) {
 
     const messagesContainer =
-        document.getElementById(
-            "messagesContainer"
-        );
+        document.getElementById("messagesContainer");
 
     const wrapper =
         document.createElement("div");
 
+    // WebSocket messages have username directly.
+    // Old database messages have username inside sender.
+    const username =
+        data.username ||
+        (data.sender && data.sender.username) ||
+        "Unknown User";
+
     const isOwnMessage =
-        data.username ===
-        CURRENT_USER.username;
+        username === CURRENT_USER.username;
 
     wrapper.className =
         `message-wrapper ${
@@ -190,17 +221,28 @@ function appendMessage(data) {
         }`;
 
     const time =
-        new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit"
-        });
+        data.timestamp
+            ? new Date(data.timestamp).toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            )
+            : new Date().toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            );
 
     wrapper.innerHTML = `
         ${
             !isOwnMessage
                 ? `
                 <div class="msg-sender-name">
-                    ${escapeHTML(data.username)}
+                    ${escapeHTML(username)}
                 </div>
                 `
                 : ""
@@ -215,9 +257,7 @@ function appendMessage(data) {
         </div>
     `;
 
-    messagesContainer.appendChild(
-        wrapper
-    );
+    messagesContainer.appendChild(wrapper);
 
     messagesContainer.scrollTop =
         messagesContainer.scrollHeight;
@@ -270,33 +310,33 @@ function joinRoom(
         "messagesContainer"
     ).innerHTML = "";
 
-    // Active room
+    // Remove active class from all rooms
     document
         .querySelectorAll(".room-item")
         .forEach(room => {
-            room.classList.remove(
-                "active"
-            );
+
+            room.classList.remove("active");
+
         });
 
+    // Add active class to selected room
     const activeRoom =
         document.getElementById(
             `room-${roomId}`
         );
 
     if (activeRoom) {
-        activeRoom.classList.add(
-            "active"
-        );
+
+        activeRoom.classList.add("active");
     }
 
-    // Connect socket
+    // Connect WebSocket
     connectWebSocket(roomId);
 
-    // Load messages
+    // Load previous messages
     loadMessages(roomId);
 
-    // Mobile
+    // Mobile behavior
     if (window.innerWidth <= 700) {
 
         document
@@ -374,7 +414,9 @@ async function loadMessages(roomId) {
         }
 
         messages.forEach(msg => {
+
             appendMessage(msg);
+
         });
 
     } catch (err) {
@@ -400,12 +442,12 @@ function sendMessage() {
     const message =
         input.value.trim();
 
-    // EMPTY MESSAGE CHECK
+    // Empty message check
     if (!message) {
         return;
     }
 
-    // SOCKET EXISTS?
+    // Socket exists?
     if (!socket) {
 
         alert(
@@ -415,7 +457,7 @@ function sendMessage() {
         return;
     }
 
-    // SOCKET OPEN?
+    // Socket open?
     if (
         socket.readyState !==
         WebSocket.OPEN
@@ -433,7 +475,7 @@ function sendMessage() {
         return;
     }
 
-    // MESSAGE OBJECT
+    // Message object
     const messageData = {
 
         type: "message",
@@ -450,17 +492,17 @@ function sendMessage() {
         messageData
     );
 
-    // SEND JSON
+    // Send JSON
     socket.send(
         JSON.stringify(
             messageData
         )
     );
 
-    // CLEAR INPUT
+    // Clear input
     input.value = "";
 
-    // FOCUS AGAIN
+    // Focus again
     input.focus();
 }
 
@@ -471,7 +513,9 @@ function sendMessage() {
 function handleKey(event) {
 
     if (event.key === "Enter") {
+
         sendMessage();
+
         return;
     }
 
@@ -484,9 +528,12 @@ function handleKey(event) {
 // =========================
 async function handleLogout() {
 
-    await fetch("/logout", {
-        method: "POST"
-    });
+    await fetch(
+        "/logout",
+        {
+            method: "POST"
+        }
+    );
 
     window.location.href =
         "/login";
@@ -565,6 +612,7 @@ function hideModal(event) {
         event.target.id ===
         "modalOverlay"
     ) {
+
         hideNewRoomModal();
     }
 }
@@ -645,3 +693,34 @@ async function createRoom() {
             "block";
     }
 }
+
+
+// =========================
+// ROOM CLICK HANDLERS
+// =========================
+document
+    .querySelectorAll(".room-item")
+    .forEach(room => {
+
+        room.addEventListener(
+            "click",
+            () => {
+
+                const roomId =
+                    room.dataset.roomId;
+
+                const roomName =
+                    room.dataset.roomName;
+
+                const roomDescription =
+                    room.dataset.roomDescription;
+
+                joinRoom(
+                    roomId,
+                    roomName,
+                    roomDescription
+                );
+            }
+        );
+
+    });

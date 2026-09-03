@@ -19,7 +19,7 @@
 
       <div
         class="my-avatar"
-        style="background: {{ user.avatar_color }}"
+        style="--avatar-color: {{ user.avatar_color }}"
       >
         {{ user.username[0].upper() }}
       </div>
@@ -85,14 +85,12 @@
       {% for room in rooms %}
 
       <div
-        class="room-item"
-        id="room-{{ room.id }}"
-        onclick="joinRoom(
-          '{{ room.id }}',
-          '{{ room.name }}',
-          '{{ room.description }}'
-        )"
-      >
+  class="room-item"
+  id="room-{{ room.id }}"
+  data-room-id="{{ room.id }}"
+  data-room-name="{{ room.name }}"
+  data-room-description="{{ room.description }}"
+>
 
         <div class="room-icon">
           #
